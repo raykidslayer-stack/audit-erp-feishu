@@ -1,0 +1,8 @@
+.env
+downloads/
+*.log
+*.zip
+.alert_state.json
+__pycache__/
+*.pyc
+.venv/
