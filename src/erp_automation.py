@@ -291,8 +291,10 @@ def _ensure_system_product_page(page: Page) -> None:
         if _is_system_product_page(page):
             return
 
-        if not _click_visible_text_by_dom_anywhere(page, "\u5546\u54c1"):
-            _click_visible_text_by_mouse(page, "\u5546\u54c1", left_limit=180)
+        if not _hover_visible_text_by_mouse_anywhere(page, "\u5546\u54c1", wait_ms=2_000):
+            if not _click_visible_text_by_mouse_anywhere(page, "\u5546\u54c1"):
+                if not _click_visible_text_by_dom_anywhere(page, "\u5546\u54c1"):
+                    _click_visible_text_by_mouse(page, "\u5546\u54c1", left_limit=180)
         page.wait_for_timeout(2_000)
         if not _click_visible_text_by_dom_anywhere(page, "\u7cfb\u7edf\u8d27\u54c1"):
             if not _click_visible_text_by_mouse_anywhere(page, "\u7cfb\u7edf\u8d27\u54c1"):
@@ -301,9 +303,14 @@ def _ensure_system_product_page(page: Page) -> None:
         page.wait_for_timeout(2_000)
 
         if not _is_system_product_page(page):
-            if page.get_by_text("\u7cfb\u7edf\u8d27\u54c1", exact=True).count() > 0:
-                page.get_by_text("\u7cfb\u7edf\u8d27\u54c1", exact=True).click()
-                page.wait_for_timeout(2_000)
+            if not _click_visible_text_by_mouse_anywhere(page, "\u5546\u54c1"):
+                _click_visible_text_by_dom_anywhere(page, "\u5546\u54c1")
+            page.wait_for_timeout(2_000)
+            if not _click_visible_text_by_dom_anywhere(page, "\u7cfb\u7edf\u8d27\u54c1"):
+                if not _click_visible_text_by_mouse_anywhere(page, "\u7cfb\u7edf\u8d27\u54c1"):
+                    if page.get_by_text("\u7cfb\u7edf\u8d27\u54c1", exact=True).count() > 0:
+                        page.get_by_text("\u7cfb\u7edf\u8d27\u54c1", exact=True).click()
+            page.wait_for_timeout(2_000)
 
         if _is_system_product_page(page):
             return
@@ -1421,7 +1428,7 @@ def _wait_for_new_download_file(download_dir: Path, before_files: set[Path], pag
 
         if attempt in {0, 10, 30, 59}:
             _dump_erp_stage_debug(page, f"download_dir_wait_{attempt:02d}")
-        page.wait_for_timeout(3_000)
+        page.wait_for_timeout(2_000)
 
     existing = "\n".join(str(path) for path in sorted(download_dir.glob("*"))[-20:])
     raise RuntimeError(f"ERP download did not create a file in {download_dir}. Existing files:\n{existing}")
