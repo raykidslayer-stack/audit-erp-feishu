@@ -32,7 +32,7 @@ def read_cost_reconcile(settings: Settings) -> CostReconcileSummary:
             status="blocked",
             detail_url=_audit_detail_url(settings),
             error=(
-                "缺少 ERP 成本表，无法判断是 ERP 缺失、audit 缺失还是双方成本不一致。"
+                "缺少 ERP 成本表，无法判断 ERP 缺失、audit 缺失或双方成本不一致。"
                 "请配置 ERP_COST_FILE，或让 audit 后端提供 /api/cost_reconcile。"
             ),
         )
@@ -63,7 +63,7 @@ def _read_audit_costs(settings: Settings) -> list[dict[str, Any]]:
         raise RuntimeError(f"audit cost validate failed: {data}")
     return [
         {
-            "name": item.get("sku", ""),
+            "name": item.get("sku", item.get("name", "")),
             "cost": item.get("raw_cost", item.get("cost", "")),
             "source_row": item.get("row", ""),
         }
@@ -73,6 +73,10 @@ def _read_audit_costs(settings: Settings) -> list[dict[str, Any]]:
 
 def _audit_session(settings: Settings) -> requests.Session:
     session = requests.Session()
+    if settings.audit_token:
+        session.headers.update({AUDIT_TOKEN_HEADER: settings.audit_token})
+        return session
+
     login_url = _audit_api_url(settings, "/api/login")
     login = session.post(
         login_url,
@@ -93,7 +97,7 @@ def _audit_api_url(settings: Settings, path: str) -> str:
 
 def _audit_detail_url(settings: Settings) -> str:
     base = settings.audit_url.split("/daily")[0].rstrip("/")
-    return f"{base}/daily"
+    return f"{base}/costs"
 
 
 def _read_erp_cost_file(path: Path) -> list[dict[str, Any]]:
@@ -125,7 +129,9 @@ def _read_erp_xlsx(path: Path) -> list[dict[str, Any]]:
 
     workbook = load_workbook(path, read_only=True, data_only=True)
     sheet = workbook.active
-    table = [[cell for cell in row] for row in sheet.iter_rows(values_only=True)]
+    if getattr(sheet, "max_column", 0) <= 1 and hasattr(sheet, "reset_dimensions"):
+        sheet.reset_dimensions()
+    table = [[cell for cell in row] for row in sheet.iter_rows(max_col=10, values_only=True)]
     return _rows_from_table(table)
 
 
@@ -203,7 +209,7 @@ def _reconcile_costs(
         items.append(
             CostReconcileItem(
                 issue_type="erp_missing",
-                action="确认停用；仍在售则去 ERP 补商品资料",
+                action="确认是否停用；仍在售则去 ERP 补商品资料",
                 audit_name=row["name"],
                 audit_cost=row["cost"],
                 note="audit 有该品名，ERP 成本表没有。",
@@ -369,8 +375,7 @@ def normalize_product_name(name: str) -> str:
     value = unicodedata.normalize("NFKC", name or "")
     value = value.replace("（", "(").replace("）", ")")
     value = re.sub(r"\s+", "", value)
-    value = value.lower()
-    return value
+    return value.lower()
 
 
 def _same_visible_name(left: str, right: str) -> bool:

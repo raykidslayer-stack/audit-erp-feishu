@@ -6,12 +6,12 @@ from .models import AlertItem, AuditSummary, CostReconcileItem, CostReconcileSum
 def render_upload_success(report_date: str, file_name: str) -> str:
     return "\n".join(
         [
-            f"ERP\u8ba2\u5355\u5df2\u63d0\u4ea4\u5230audit - {report_date}",
+            f"ERP订单已提交到audit - {report_date}",
             "",
-            "\u72b6\u6001\uff1a\u5df2\u5b8c\u6210\u4e0b\u8f7d\u3001\u8f6c\u6362\u5e76\u63d0\u4ea4\u6e05\u6d17",
-            f"\u6587\u4ef6\uff1a{file_name}",
+            "状态：已完成下载、转换并提交清洗",
+            f"文件：{file_name}",
             "",
-            "\u8bf4\u660e\uff1aaudit\u9875\u9762\u53ef\u80fd\u6709\u77ed\u6682\u5237\u65b0\u5ef6\u8fdf\uff0c\u65e5\u5386\u53d8\u7eff\u540e\u5373\u4ee3\u8868\u6e05\u6d17\u5b8c\u6210\u3002",
+            "说明：audit页面可能有短暂刷新延迟，日历变绿后即代表清洗完成。",
         ]
     )
 
@@ -19,12 +19,12 @@ def render_upload_success(report_date: str, file_name: str) -> str:
 def render_upload_failure(report_date: str, error: str) -> str:
     return "\n".join(
         [
-            f"ERP\u8ba2\u5355\u4e0a\u4f20\u7591\u4f3c\u5931\u8d25 - {report_date}",
+            f"ERP订单上传疑似失败 - {report_date}",
             "",
-            "\u72b6\u6001\uff1a\u81ea\u52a8\u5316\u6d41\u7a0b\u6267\u884c\u5931\u8d25",
-            f"\u9519\u8bef\uff1a{error}",
+            "状态：自动化流程执行失败",
+            f"错误：{error}",
             "",
-            "\u8bf7\u68c0\u67e5ERP\u4e0b\u8f7d\u3001audit\u4e0a\u4f20\u9875\u9762\u6216\u670d\u52a1\u5668\u65e5\u5fd7\u3002",
+            "请检查ERP下载、audit上传页面或服务器日志。",
         ]
     )
 
@@ -32,29 +32,29 @@ def render_upload_failure(report_date: str, error: str) -> str:
 def render_daily_report(summary: AuditSummary) -> str:
     return "\n".join(
         [
-            f"audit\u6bcf\u65e5\u5229\u6da6\u65e5\u62a5 - {summary.report_date}",
+            f"audit每日利润日报 - {summary.report_date}",
             "",
-            "\u6838\u5fc3\u6307\u6807\uff1a",
-            f"\u53d1\u8d27\u5355\u91cf\uff1a{summary.total_orders}",
-            f"\u6628\u65e5\u9884\u4f30\u5229\u6da6\uff1a{summary.current_profit or '-'}",
-            f"\u6628\u65e5\u9884\u4f30\u5e94\u6536\uff1a{summary.daily_revenue or '-'}",
-            f"\u6628\u65e5\u9884\u4f30\u8d27\u672c\uff1a{summary.daily_goods_cost or '-'}",
-            f"\u6628\u65e5\u9884\u4f30\u5e73\u53f0\u8d39\uff1a{summary.daily_platform_fee or '-'}",
-            f"\u6628\u65e5\u9884\u4f30\u8fd0\u8d39\uff1a{summary.daily_shipping_fee or '-'}",
-            f"\u6628\u65e5\u9884\u4f30\u6295\u6d41\u8d39\uff1a{summary.daily_ad_spend or '-'}",
-            f"\u672c\u6708\u52a8\u6001\u7d2f\u8ba1\uff1a{summary.monthly_profit or '-'}",
+            "核心指标：",
+            f"发货单量：{summary.total_orders}",
+            f"昨日预估利润：{summary.current_profit or '-'}",
+            f"昨日预估应收：{summary.daily_revenue or '-'}",
+            f"昨日预估货本：{summary.daily_goods_cost or '-'}",
+            f"昨日预估平台费：{summary.daily_platform_fee or '-'}",
+            f"昨日预估运费：{summary.daily_shipping_fee or '-'}",
+            f"昨日预估投流费：{summary.daily_ad_spend or '-'}",
+            f"本月动态累计：{summary.monthly_profit or '-'}",
             "",
-            "\u672c\u6708\u9884\u4f30\u52a8\u6001\u7d2f\u52a0\uff1a",
-            f"\u672c\u6708\u9884\u4f30\u7d2f\u8ba1\u5e94\u6536\uff1a{summary.revenue or '-'}",
-            f"\u672c\u6708\u9884\u4f30\u7d2f\u8ba1\u8d27\u672c\uff1a{summary.goods_cost or '-'}",
-            f"\u672c\u6708\u9884\u4f30\u7d2f\u8ba1\u5e73\u53f0\u8d39\uff1a{summary.platform_fee or '-'}",
-            f"\u672c\u6708\u9884\u4f30\u7d2f\u8ba1\u8fd0\u8d39\uff1a{summary.shipping_fee or '-'}",
-            f"\u672c\u6708\u9884\u4f30\u7d2f\u8ba1\u6295\u6d41\u8d39\uff1a{summary.ad_spend or '-'}",
+            "本月预估动态累加：",
+            f"本月预估累计应收：{summary.revenue or '-'}",
+            f"本月预估累计货本：{summary.goods_cost or '-'}",
+            f"本月预估累计平台费：{summary.platform_fee or '-'}",
+            f"本月预估累计运费：{summary.shipping_fee or '-'}",
+            f"本月预估累计投流费：{summary.ad_spend or '-'}",
             "",
-            "\u5f02\u5e38\u63d0\u9192\uff1a",
-            f"\u7591\u4f3c\u4e8f\u635f\u8ba2\u5355\uff1a{summary.suspected_loss_links}",
+            "异常提醒：",
+            f"疑似亏损订单：{summary.suspected_loss_links}",
             "",
-            f"\u67e5\u770b\u8be6\u60c5\uff1a{summary.detail_url}",
+            f"查看详情：{summary.detail_url}",
         ]
     )
 
@@ -66,7 +66,7 @@ def render_alert(alert: AlertItem) -> str:
             "",
             alert.detail,
             "",
-            f"\u67e5\u770b\u8be6\u60c5\uff1a{alert.detail_url}",
+            f"查看详情：{alert.detail_url}",
         ]
     )
 
@@ -84,11 +84,12 @@ def render_cost_reconcile(summary: CostReconcileSummary) -> str:
             ]
         )
 
+    source = "audit 后端对账接口" if summary.source == "audit" else "本地 ERP 成本表 + audit 成本库接口"
     lines = [
         f"ERP vs audit 成本库核查 - {summary.report_date}",
         "",
         "核查口径：先核对品名，再核对成本；每条异常明确处理系统。",
-        f"数据来源：{'audit 后端对账接口' if summary.source == 'audit' else '本地 ERP 成本表 + audit 成本库接口'}",
+        f"数据来源：{source}",
         f"audit 品名数：{summary.audit_count}",
         f"ERP 品名数：{summary.erp_count}",
         f"异常总数：{summary.total_issues}",
@@ -100,13 +101,13 @@ def render_cost_reconcile(summary: CostReconcileSummary) -> str:
         [
             "",
             "异常分类：",
-            f"- ERP 有 / audit 无：{summary.audit_missing_count} 个 → 去 audit 补品名和成本",
-            f"- audit 有 / ERP 无：{summary.erp_missing_count} 个 → 确认停用；仍在售则去 ERP 补",
-            f"- 品名不完全一致：{summary.name_mismatch_count} 个 → 统一品名或维护映射",
-            f"- audit 成本缺失/为 0：{summary.audit_cost_missing_count} 个 → 去 audit 补成本",
-            f"- ERP 成本缺失/为 0：{summary.erp_cost_missing_count} 个 → 去 ERP 补成本",
-            f"- 双方成本不一致：{summary.cost_mismatch_count} 个 → 财务确认基准价",
-            f"- 重复品名：{summary.duplicate_count} 个 → 先合并或区分重复品名",
+            f"- ERP 有 / audit 无：{summary.audit_missing_count} 个 -> 去 audit 补品名和成本",
+            f"- audit 有 / ERP 无：{summary.erp_missing_count} 个 -> 确认停用；仍在售则去 ERP 补",
+            f"- 品名不完全一致：{summary.name_mismatch_count} 个 -> 统一品名或维护映射",
+            f"- audit 成本缺失/为 0：{summary.audit_cost_missing_count} 个 -> 去 audit 补成本",
+            f"- ERP 成本缺失/为 0：{summary.erp_cost_missing_count} 个 -> 去 ERP 补成本",
+            f"- 双方成本不一致：{summary.cost_mismatch_count} 个 -> 财务确认基准价",
+            f"- 重复品名：{summary.duplicate_count} 个 -> 先合并或区分重复品名",
         ]
     )
 
