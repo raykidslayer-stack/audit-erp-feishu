@@ -80,11 +80,17 @@ def run_alerts() -> None:
 def run_cost_reconcile() -> None:
     settings = load_settings()
     summary = read_cost_reconcile(settings)
-    app_id = settings.cost_feishu_app_id or settings.feishu_app_id
-    app_secret = settings.cost_feishu_app_secret or settings.feishu_app_secret
-    chat_id = settings.cost_feishu_chat_id or settings.feishu_chat_id
-    client = FeishuClient(app_id, app_secret)
-    client.send_text_to_chat(chat_id, render_cost_reconcile(summary))
+    if not (
+        settings.cost_feishu_app_id
+        and settings.cost_feishu_app_secret
+        and settings.cost_feishu_chat_id
+    ):
+        raise RuntimeError(
+            "Missing COST_FEISHU_APP_ID, COST_FEISHU_APP_SECRET, or COST_FEISHU_CHAT_ID"
+        )
+
+    client = FeishuClient(settings.cost_feishu_app_id, settings.cost_feishu_app_secret)
+    client.send_text_to_chat(settings.cost_feishu_chat_id, render_cost_reconcile(summary))
 
 
 def _send_upload_success(settings, report_date: str, file_name: str) -> None:

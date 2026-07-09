@@ -17,6 +17,7 @@ from .models import CostReconcileItem, CostReconcileSummary
 
 
 AUDIT_TOKEN_HEADER = "X-Audit-Token"
+LOW_TEST_COST_THRESHOLD = Decimal("0.50")
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
@@ -196,6 +197,8 @@ def _reconcile_costs(
 
     for key in sorted(set(erp_by_key) - set(audit_by_key)):
         row = erp_by_key[key][0]
+        if _ignore_single_sided_cost(row["cost"]):
+            continue
         items.append(
             CostReconcileItem(
                 issue_type="audit_missing",
@@ -218,6 +221,8 @@ def _reconcile_costs(
 
     for key in sorted(set(audit_by_key) - set(erp_by_key)):
         row = audit_by_key[key][0]
+        if _ignore_single_sided_cost(row["cost"]):
+            continue
         items.append(
             CostReconcileItem(
                 issue_type="erp_missing",
@@ -241,6 +246,10 @@ def _reconcile_costs(
     for key in sorted(set(audit_by_key) & set(erp_by_key)):
         audit_group = audit_by_key[key]
         erp_group = erp_by_key[key]
+        audit_cost = _decimal_or_none(audit_group[0]["cost"])
+        erp_cost = _decimal_or_none(erp_group[0]["cost"])
+        if _ignore_matched_costs(audit_cost, erp_cost):
+            continue
         if len(audit_group) > 1 or len(erp_group) > 1:
             items.append(
                 CostReconcileItem(
@@ -255,8 +264,6 @@ def _reconcile_costs(
 
         audit_row = audit_group[0]
         erp_row = erp_group[0]
-        audit_cost = _decimal_or_none(audit_row["cost"])
-        erp_cost = _decimal_or_none(erp_row["cost"])
         if not _same_visible_name(audit_row["name"], erp_row["name"]):
             items.append(
                 CostReconcileItem(
@@ -406,6 +413,16 @@ def _decimal_or_none(value: Any) -> Decimal | None:
 
 def _missing_cost(value: Decimal | None) -> bool:
     return value is None or value <= 0
+
+
+def _ignore_single_sided_cost(value: Any) -> bool:
+    cost = _decimal_or_none(value)
+    return cost is not None and Decimal("0") <= cost < LOW_TEST_COST_THRESHOLD
+
+
+def _ignore_matched_costs(left: Decimal | None, right: Decimal | None) -> bool:
+    costs = [cost for cost in (left, right) if cost is not None]
+    return bool(costs) and all(Decimal("0") <= cost < LOW_TEST_COST_THRESHOLD for cost in costs)
 
 
 def _money(value: Decimal) -> str:
