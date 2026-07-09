@@ -294,6 +294,17 @@ def _ensure_system_product_page(page: Page) -> None:
         if _is_system_product_page(page):
             return
 
+        if not _hover_visible_text_by_mouse_anywhere(page, "\u4ed3\u50a8", wait_ms=2_000):
+            if not _click_visible_text_by_mouse_anywhere(page, "\u4ed3\u50a8"):
+                _click_visible_text_by_dom_anywhere(page, "\u4ed3\u50a8")
+        page.wait_for_timeout(2_000)
+        if not _click_visible_text_by_dom_anywhere(page, "\u5e93\u5b58\u67e5\u8be2"):
+            _click_visible_text_by_mouse_anywhere(page, "\u5e93\u5b58\u67e5\u8be2")
+        page.wait_for_timeout(2_000)
+
+        if _is_system_product_page(page):
+            return
+
         if not _hover_visible_text_by_mouse_anywhere(page, "\u5546\u54c1", wait_ms=2_000):
             if not _click_visible_text_by_mouse_anywhere(page, "\u5546\u54c1"):
                 if not _click_visible_text_by_dom_anywhere(page, "\u5546\u54c1"):
