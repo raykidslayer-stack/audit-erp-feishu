@@ -43,8 +43,7 @@ def read_cost_reconcile(settings: Settings) -> CostReconcileSummary:
 
 
 def _read_backend_reconcile(settings: Settings) -> CostReconcileSummary | None:
-    session = _audit_session(settings)
-    response = session.get(_audit_api_url(settings, "/api/cost_reconcile"), timeout=30)
+    response = _audit_get(settings, "/api/cost_reconcile")
     if response.status_code == 404:
         return None
     response.raise_for_status()
@@ -55,8 +54,7 @@ def _read_backend_reconcile(settings: Settings) -> CostReconcileSummary | None:
 
 
 def _read_audit_costs(settings: Settings) -> list[dict[str, Any]]:
-    session = _audit_session(settings)
-    response = session.get(_audit_api_url(settings, "/api/cost_validate"), timeout=30)
+    response = _audit_get(settings, "/api/cost_validate")
     response.raise_for_status()
     data = response.json()
     if data.get("status") not in {"success", "ok"}:
@@ -76,6 +74,20 @@ def _audit_session(settings: Settings) -> requests.Session:
     if settings.audit_token:
         session.headers.update({AUDIT_TOKEN_HEADER: settings.audit_token})
         return session
+
+    return _audit_login_session(settings)
+
+
+def _audit_get(settings: Settings, path: str) -> requests.Response:
+    session = _audit_session(settings)
+    response = session.get(_audit_api_url(settings, path), timeout=30)
+    if response.status_code in {401, 403} and settings.audit_token:
+        response = _audit_login_session(settings).get(_audit_api_url(settings, path), timeout=30)
+    return response
+
+
+def _audit_login_session(settings: Settings) -> requests.Session:
+    session = requests.Session()
 
     login_url = _audit_api_url(settings, "/api/login")
     login = session.post(
