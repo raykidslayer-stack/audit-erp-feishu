@@ -341,6 +341,15 @@ def _is_system_product_page(page: Page) -> bool:
                 return True
     except Exception:
         pass
+    for frame in page.frames:
+        try:
+            text = frame.locator("body").inner_text(timeout=2_000)
+            if "\u8d27\u54c1\u540d\u79f0" in text and "\u5bfc\u51fa" in text:
+                return True
+            if "\u5e93\u5b58\u67e5\u8be2" in text and "\u5bfc\u51fa" in text:
+                return True
+        except Exception:
+            continue
     return bool(
         page.evaluate(
             """
