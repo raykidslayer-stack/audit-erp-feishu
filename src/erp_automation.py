@@ -287,6 +287,9 @@ def _open_order_module_from_home(page: Page) -> None:
 
 def _ensure_system_product_page(page: Page) -> None:
     page.wait_for_timeout(2_000)
+    if not _is_system_product_page(page):
+        page.goto("https://erp.huice.com/#/app/warehouse/stock-management", wait_until="domcontentloaded")
+        page.wait_for_timeout(2_000)
     for _ in range(3):
         if _is_system_product_page(page):
             return
@@ -320,6 +323,13 @@ def _ensure_system_product_page(page: Page) -> None:
 
 
 def _is_system_product_page(page: Page) -> bool:
+    try:
+        if "/app/warehouse/stock-management" in page.url:
+            text = page.locator("body").inner_text(timeout=2_000)
+            if "\u8d27\u54c1\u540d\u79f0" in text and "\u5bfc\u51fa" in text:
+                return True
+    except Exception:
+        pass
     return bool(
         page.evaluate(
             """
