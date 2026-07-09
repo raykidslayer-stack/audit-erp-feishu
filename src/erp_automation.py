@@ -1225,7 +1225,7 @@ def _download_latest_export(page: Page) -> None:
                 page.get_by_text("刷新", exact=True).click()
             except Exception:
                 pass
-        page.wait_for_timeout(5_000)
+        page.wait_for_timeout(2_000)
 
     _dump_erp_stage_debug(page, "export_records_download_missing")
     if not _click_visible_text_by_mouse_anywhere(page, "下载"):
