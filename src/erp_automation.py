@@ -1558,7 +1558,20 @@ def _dump_erp_stage_debug(page: Page, name: str) -> None:
     image_path = debug_dir / f"erp_{safe_name}_debug.png"
     stamped_text_path = debug_dir / f"erp_{safe_name}_debug_{timestamp}.txt"
     stamped_image_path = debug_dir / f"erp_{safe_name}_debug_{timestamp}.png"
-    text = page.locator("body").inner_text()
+    text_parts = [f"PAGE_URL: {page.url}", ""]
+    try:
+        text_parts.append(page.locator("body").inner_text())
+    except Exception as exc:
+        text_parts.append(f"MAIN_TEXT_ERROR: {exc}")
+    text_parts.append("\n\n==== FRAMES ====")
+    for index, frame in enumerate(page.frames):
+        text_parts.append(f"\n---- frame {index} ----")
+        text_parts.append(f"URL: {frame.url}")
+        try:
+            text_parts.append(frame.locator("body").inner_text(timeout=2_000)[:2_000])
+        except Exception as exc:
+            text_parts.append(f"TEXT_ERROR: {exc}")
+    text = "\n".join(text_parts)
     text_path.write_text(text, encoding="utf-8")
     stamped_text_path.write_text(text, encoding="utf-8")
     page.screenshot(path=str(image_path), full_page=True)
