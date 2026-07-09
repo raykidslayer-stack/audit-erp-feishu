@@ -11,6 +11,7 @@ from .audit_automation import (
     upload_erp_file_to_audit_for_date,
 )
 from .config import load_settings
+from .cost_reconcile import read_cost_reconcile
 from .erp_automation import (
     download_completed_orders_for_date,
     download_yesterday_completed_orders,
@@ -19,6 +20,7 @@ from .excel_converter import prepare_audit_upload_file
 from .feishu import FeishuClient
 from .messages import (
     render_alert,
+    render_cost_reconcile,
     render_daily_report,
     render_upload_failure,
     render_upload_success,
@@ -75,6 +77,16 @@ def run_alerts() -> None:
             client.send_text_to_chat(settings.feishu_chat_id, render_alert(alert))
 
 
+def run_cost_reconcile() -> None:
+    settings = load_settings()
+    summary = read_cost_reconcile(settings)
+    app_id = settings.cost_feishu_app_id or settings.feishu_app_id
+    app_secret = settings.cost_feishu_app_secret or settings.feishu_app_secret
+    chat_id = settings.cost_feishu_chat_id or settings.feishu_chat_id
+    client = FeishuClient(app_id, app_secret)
+    client.send_text_to_chat(chat_id, render_cost_reconcile(summary))
+
+
 def _send_upload_success(settings, report_date: str, file_name: str) -> None:
     client = FeishuClient(settings.feishu_app_id, settings.feishu_app_secret)
     client.send_text_to_chat(
@@ -100,7 +112,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "command",
-        choices=["run-all", "run-download-upload", "report", "alerts"],
+        choices=["run-all", "run-download-upload", "report", "alerts", "cost-reconcile"],
     )
     parser.add_argument("--start-date", help="Backfill start date, format YYYY-MM-DD")
     parser.add_argument("--end-date", help="Backfill end date, format YYYY-MM-DD")
@@ -122,6 +134,8 @@ def main() -> None:
         run_report()
     elif args.command == "alerts":
         run_alerts()
+    elif args.command == "cost-reconcile":
+        run_cost_reconcile()
 
 
 if __name__ == "__main__":

@@ -45,3 +45,36 @@ class AlertItem:
 class DownloadResult:
     file_path: Path
     order_date: str
+
+
+@dataclass(frozen=True)
+class CostReconcileItem:
+    issue_type: str
+    action: str
+    erp_name: str = ""
+    audit_name: str = ""
+    erp_cost: str = ""
+    audit_cost: str = ""
+    diff: str = ""
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class CostReconcileSummary:
+    report_date: str
+    source: str
+    status: str
+    audit_count: int = 0
+    erp_count: int = 0
+    total_issues: int = 0
+    audit_missing_count: int = 0
+    erp_missing_count: int = 0
+    name_mismatch_count: int = 0
+    audit_cost_missing_count: int = 0
+    erp_cost_missing_count: int = 0
+    cost_mismatch_count: int = 0
+    duplicate_count: int = 0
+    stale_erp_file: bool = False
+    detail_url: str = ""
+    items: list[CostReconcileItem] | None = None
+    error: str = ""

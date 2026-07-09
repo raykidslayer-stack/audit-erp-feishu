@@ -24,6 +24,10 @@ def _bool(name: str, default: bool = True) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _optional(name: str, default: str = "") -> str:
+    return os.getenv(name, default).strip()
+
+
 @dataclass(frozen=True)
 class Settings:
     erp_url: str
@@ -36,6 +40,10 @@ class Settings:
     feishu_app_id: str
     feishu_app_secret: str
     feishu_chat_id: str
+    cost_feishu_app_id: str
+    cost_feishu_app_secret: str
+    cost_feishu_chat_id: str
+    erp_cost_file: str
     download_dir: Path
     headless: bool
 
@@ -55,7 +63,10 @@ def load_settings() -> Settings:
         feishu_app_id=_required("FEISHU_APP_ID"),
         feishu_app_secret=_required("FEISHU_APP_SECRET"),
         feishu_chat_id=_required("FEISHU_CHAT_ID"),
+        cost_feishu_app_id=_optional("COST_FEISHU_APP_ID"),
+        cost_feishu_app_secret=_optional("COST_FEISHU_APP_SECRET"),
+        cost_feishu_chat_id=_optional("COST_FEISHU_CHAT_ID"),
+        erp_cost_file=_optional("ERP_COST_FILE"),
         download_dir=download_dir,
         headless=_bool("HEADLESS", True),
     )
-
