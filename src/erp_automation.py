@@ -54,6 +54,49 @@ def download_completed_orders_for_date(settings: Settings, order_date: date) -> 
         return DownloadResult(file_path=file_path, order_date=f"{order_date:%Y-%m-%d}")
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True)
+def download_erp_cost_file(settings: Settings) -> DownloadResult:
+    target_path = (
+        Path(settings.erp_cost_file)
+        if settings.erp_cost_file
+        else settings.download_dir / "latest_erp_cost.xlsx"
+    )
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=settings.headless, downloads_path=str(settings.download_dir))
+        context = browser.new_context(accept_downloads=True, viewport={"width": 1920, "height": 1080})
+        page = context.new_page()
+        page.goto(settings.erp_url, wait_until="domcontentloaded")
+
+        _login_if_needed(page, settings)
+        _ensure_system_product_page(page)
+        _start_export_filtered_data(page)
+        _open_export_records(page)
+
+        before_download_files = _snapshot_download_files(settings.download_dir)
+        try:
+            with page.expect_download(timeout=180_000) as download_info:
+                _download_latest_export(page)
+
+            download = download_info.value
+            if target_path.exists():
+                target_path.unlink()
+            download.save_as(target_path)
+            print(f"ERP cost download saved: {target_path}")
+        except PlaywrightTimeoutError:
+            _dump_erp_stage_debug(page, "cost_download_timeout")
+            found_path = _wait_for_new_download_file(settings.download_dir, before_download_files, page)
+            if target_path.exists():
+                target_path.unlink()
+            found_path.replace(target_path)
+            print(f"ERP cost download found by directory polling: {target_path}")
+
+        context.close()
+        browser.close()
+        return DownloadResult(file_path=target_path, order_date=f"{date.today():%Y-%m-%d}")
+
+
 def _login_if_needed(page: Page, settings: Settings) -> None:
     page.wait_for_load_state("domcontentloaded")
     page.wait_for_timeout(1_000)
@@ -240,6 +283,44 @@ def _open_order_module_from_home(page: Page) -> None:
     page.wait_for_timeout(4_000)
     _click_visible_text_by_mouse(page, "已完结")
     page.wait_for_timeout(4_000)
+
+
+def _ensure_system_product_page(page: Page) -> None:
+    page.wait_for_timeout(2_000)
+    for _ in range(3):
+        if _is_system_product_page(page):
+            return
+
+        _click_visible_text_by_mouse(page, "\u5546\u54c1", left_limit=180)
+        page.wait_for_timeout(2_000)
+        if not _click_visible_text_by_mouse_anywhere(page, "\u7cfb\u7edf\u8d27\u54c1"):
+            if page.get_by_text("\u7cfb\u7edf\u8d27\u54c1", exact=True).count() > 0:
+                page.get_by_text("\u7cfb\u7edf\u8d27\u54c1", exact=True).click()
+        page.wait_for_timeout(5_000)
+
+        if _is_system_product_page(page):
+            return
+
+    _dump_erp_stage_debug(page, "system_product_navigation_failed")
+    raise RuntimeError("Cannot open ERP system product page.")
+
+
+def _is_system_product_page(page: Page) -> bool:
+    return bool(
+        page.evaluate(
+            """
+            () => {
+                const text = document.body.innerText || '';
+                const href = window.location.href || '';
+                const hash = window.location.hash || '';
+                const hasProductText = ['系统货品', '货品名称', '成本价', '商品'].some((item) => text.includes(item));
+                const hasExport = text.includes('导出');
+                const productRoute = /goods|product|sku|item/i.test(`${href} ${hash}`);
+                return (hasProductText && hasExport) || (productRoute && hasProductText);
+            }
+            """
+        )
+    )
 
 
 def _click_visible_text_by_mouse(page: Page, text_value: str, left_limit: int | None = None) -> None:

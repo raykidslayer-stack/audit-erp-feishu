@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from datetime import date, timedelta
 
 from .alert_state import AlertState
@@ -14,6 +15,7 @@ from .config import load_settings
 from .cost_reconcile import read_cost_reconcile
 from .erp_automation import (
     download_completed_orders_for_date,
+    download_erp_cost_file,
     download_yesterday_completed_orders,
 )
 from .excel_converter import prepare_audit_upload_file
@@ -79,6 +81,9 @@ def run_alerts() -> None:
 
 def run_cost_reconcile() -> None:
     settings = load_settings()
+    cost_download = download_erp_cost_file(settings)
+    if not settings.erp_cost_file:
+        settings = replace(settings, erp_cost_file=str(cost_download.file_path))
     summary = read_cost_reconcile(settings)
     if not (
         settings.cost_feishu_app_id
