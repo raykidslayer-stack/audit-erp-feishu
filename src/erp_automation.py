@@ -291,12 +291,19 @@ def _ensure_system_product_page(page: Page) -> None:
         if _is_system_product_page(page):
             return
 
-        _click_visible_text_by_mouse(page, "\u5546\u54c1", left_limit=180)
+        if not _click_visible_text_by_dom_anywhere(page, "\u5546\u54c1"):
+            _click_visible_text_by_mouse(page, "\u5546\u54c1", left_limit=180)
         page.wait_for_timeout(2_000)
-        if not _click_visible_text_by_mouse_anywhere(page, "\u7cfb\u7edf\u8d27\u54c1"):
+        if not _click_visible_text_by_dom_anywhere(page, "\u7cfb\u7edf\u8d27\u54c1"):
+            if not _click_visible_text_by_mouse_anywhere(page, "\u7cfb\u7edf\u8d27\u54c1"):
+                if page.get_by_text("\u7cfb\u7edf\u8d27\u54c1", exact=True).count() > 0:
+                    page.get_by_text("\u7cfb\u7edf\u8d27\u54c1", exact=True).click()
+        page.wait_for_timeout(2_000)
+
+        if not _is_system_product_page(page):
             if page.get_by_text("\u7cfb\u7edf\u8d27\u54c1", exact=True).count() > 0:
                 page.get_by_text("\u7cfb\u7edf\u8d27\u54c1", exact=True).click()
-        page.wait_for_timeout(5_000)
+                page.wait_for_timeout(2_000)
 
         if _is_system_product_page(page):
             return
@@ -1171,19 +1178,19 @@ def _start_export_filtered_data(page: Page) -> None:
     _dump_erp_stage_debug(page, "before_export")
     if not _hover_visible_text_by_mouse_anywhere(page, "导出", min_y=250, prefer_right=True, wait_ms=1_000):
         _click_text(page, "导出", exact=True)
-    page.wait_for_timeout(500)
+    page.wait_for_timeout(2_000)
     _dump_erp_stage_debug(page, "export_menu")
     if not _click_visible_text_by_mouse_anywhere(page, "导出筛选数据"):
         if page.get_by_text("导出筛选数据", exact=True).count() > 0:
             page.get_by_text("导出筛选数据", exact=True).click()
         elif not _click_visible_text_by_mouse_anywhere(page, "导出全部筛选数据"):
             _click_text(page, "导出全部筛选数据", exact=True)
-    page.wait_for_timeout(1_000)
+    page.wait_for_timeout(2_000)
     _dump_erp_stage_debug(page, "export_settings")
     if not _click_visible_text_by_mouse_anywhere(page, "确认"):
         if not _click_visible_text_by_mouse_anywhere(page, "确定"):
             _click_button_or_text(page, "确认")
-    page.wait_for_timeout(10_000)
+    page.wait_for_timeout(2_000)
     _dump_erp_stage_debug(page, "after_export_confirm")
 
 
@@ -1195,7 +1202,7 @@ def _open_export_records(page: Page) -> None:
         else:
             if not _hover_visible_text_by_mouse_anywhere(page, "导出", min_y=250, prefer_right=True, wait_ms=1_000):
                 _click_text(page, "导出", exact=True)
-            page.wait_for_timeout(500)
+            page.wait_for_timeout(2_000)
             if not _click_visible_text_by_mouse_anywhere(page, "查看导出记录"):
                 _click_text(page, "查看导出记录", exact=True)
 
