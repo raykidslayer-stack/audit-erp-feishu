@@ -210,6 +210,7 @@ def _extract_summary(page: Page) -> AuditSummary:
     report_date = _extract_report_date(text)
     total_orders = _extract_total_orders(text)
     suspected_loss_links = _extract_suspected_loss_count(text)
+    daily_metrics = _extract_daily_table_metrics(text)
 
     return AuditSummary(
         report_date=report_date,
@@ -219,6 +220,11 @@ def _extract_summary(page: Page) -> AuditSummary:
         suspected_loss_links=suspected_loss_links,
         detail_url=page.url,
         current_profit=_extract_money_after_label(text, "\u5f53\u65e5\u9884\u4f30\u5229\u6da6"),
+        daily_revenue=daily_metrics.get("revenue", ""),
+        daily_goods_cost=daily_metrics.get("goods_cost", ""),
+        daily_platform_fee=daily_metrics.get("platform_fee", ""),
+        daily_shipping_fee=daily_metrics.get("shipping_fee", ""),
+        daily_ad_spend=daily_metrics.get("ad_spend", ""),
         monthly_profit=_extract_money_after_label(text, "\u672c\u6708\u52a8\u6001\u7d2f\u8ba1"),
         revenue=_extract_money_after_label(text, "\u9884\u4f30\u7d2f\u8ba1\u5e94\u6536"),
         goods_cost=_extract_money_after_label(text, "\u9884\u4f30\u7d2f\u8ba1\u8d27\u672c"),
@@ -253,7 +259,7 @@ def _visible_text(page: Page) -> str:
 
 
 def _extract_money_after_label(text: str, label: str) -> str:
-    pattern = re.escape(label) + r"\s*\n+\s*([+-]?\s*\uffe5?\s*[\d,]+(?:\.\d+)?)"
+    pattern = re.escape(label) + r"[\s\S]{0,80}?([+-]?\s*(?:\uffe5|\u00a5)?\s*[\d,]+(?:\.\d+)?)"
     match = re.search(pattern, text)
     if not match:
         return ""
@@ -262,8 +268,14 @@ def _extract_money_after_label(text: str, label: str) -> str:
 
 def _normalize_money(value: str) -> str:
     compact = re.sub(r"\s+", "", value)
+    compact = compact.replace("\u00a5", "\uffe5")
     if compact and not compact.startswith(("\uffe5", "-\uffe5", "+\uffe5")):
-        compact = "\uffe5" + compact
+        if compact.startswith("-"):
+            compact = "-\uffe5" + compact[1:]
+        elif compact.startswith("+"):
+            compact = "+\uffe5" + compact[1:]
+        else:
+            compact = "\uffe5" + compact
     return compact
 
 
@@ -274,7 +286,74 @@ def _extract_report_date(text: str) -> str:
     return f"{_target_order_date():%Y-%m-%d}"
 
 
+def _extract_daily_table_metrics(text: str) -> dict[str, str]:
+    table_block = _between(text, "\u5e97\u94fa\u540d\u79f0\t\u53d1\u8d27\u5355\u91cf", "T+1")
+    rows = _daily_table_rows(table_block)
+    totals = {
+        "revenue": 0.0,
+        "goods_cost": 0.0,
+        "platform_fee": 0.0,
+        "shipping_fee": 0.0,
+        "ad_spend": 0.0,
+    }
+
+    for row in rows:
+        amounts = _money_values(row)
+        if len(amounts) < 6:
+            continue
+        totals["revenue"] += amounts[0]
+        totals["goods_cost"] += abs(amounts[1])
+        totals["platform_fee"] += abs(amounts[2])
+        totals["shipping_fee"] += abs(amounts[3])
+        totals["ad_spend"] += abs(amounts[-2])
+
+    return {key: _format_money(value) for key, value in totals.items() if value}
+
+
+def _daily_table_rows(table_block: str) -> list[str]:
+    rows: list[list[str]] = []
+    current: list[str] = []
+    for line in table_block.splitlines():
+        if not line.strip():
+            continue
+        if re.search(r"^[^\t\n]+\t\d+\u5305\u88f9\b", line):
+            if current:
+                rows.append(current)
+            current = [line]
+        elif current:
+            current.append(line)
+    if current:
+        rows.append(current)
+    return ["\n".join(row) for row in rows]
+
+
+def _money_values(text: str) -> list[float]:
+    return [_money_to_float(value) for value in re.findall(r"[+-]?\s*(?:\uffe5|\u00a5)\s*[\d,]+(?:\.\d+)?", text)]
+
+
+def _money_to_float(value: str) -> float:
+    compact = value.replace("\u00a5", "\uffe5")
+    compact = re.sub(r"\s+", "", compact).replace("\uffe5", "").replace(",", "")
+    try:
+        return float(compact)
+    except ValueError:
+        return 0.0
+
+
+def _format_money(value: float) -> str:
+    sign = "-" if value < 0 else ""
+    return f"{sign}\uffe5{abs(value):,.2f}"
+
+
 def _extract_total_orders(text: str) -> int:
+    table_block = _between(text, "\u5e97\u94fa\u540d\u79f0\t\u53d1\u8d27\u5355\u91cf", "T+1")
+    package_counts = [
+        int(value)
+        for value in re.findall(r"(?m)^[^\t\n]+\t(\d+)\u5305\u88f9\b", table_block)
+    ]
+    if package_counts:
+        return sum(package_counts)
+
     shipping_block = _between(
         text,
         "\u9884\u4f30\u7d2f\u8ba1\u8fd0\u8d39",
@@ -284,7 +363,6 @@ def _extract_total_orders(text: str) -> int:
     if order_counts:
         return sum(order_counts)
 
-    table_block = _between(text, "\u5e97\u94fa\u540d\u79f0\t\u53d1\u8d27\u5355\u91cf", "T+1")
     return sum(int(value) for value in re.findall(r"\t(\d+)\n", table_block))
 
 

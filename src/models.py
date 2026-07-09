@@ -13,6 +13,11 @@ class AuditSummary:
     suspected_loss_links: int
     detail_url: str
     current_profit: str = ""
+    daily_revenue: str = ""
+    daily_goods_cost: str = ""
+    daily_platform_fee: str = ""
+    daily_shipping_fee: str = ""
+    daily_ad_spend: str = ""
     monthly_profit: str = ""
     revenue: str = ""
     goods_cost: str = ""

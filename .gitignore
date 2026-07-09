@@ -1,5 +1,6 @@
 .env
 downloads/
+logs/
 *.log
 *.zip
 .alert_state.json
