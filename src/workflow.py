@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import time
 from dataclasses import replace
 from datetime import date, timedelta
 
@@ -27,6 +28,9 @@ from .messages import (
     render_upload_failure,
     render_upload_success,
 )
+
+
+UPLOAD_SUCCESS_NOTIFY_DELAY_SECONDS = 5 * 60
 
 
 def run_download_upload() -> None:
@@ -99,11 +103,17 @@ def run_cost_reconcile() -> None:
 
 
 def _send_upload_success(settings, report_date: str, file_name: str) -> None:
+    print(
+        "Upload success notification delayed: "
+        f"{UPLOAD_SUCCESS_NOTIFY_DELAY_SECONDS} seconds"
+    )
+    time.sleep(UPLOAD_SUCCESS_NOTIFY_DELAY_SECONDS)
     client = FeishuClient(settings.feishu_app_id, settings.feishu_app_secret)
     client.send_text_to_chat(
         settings.feishu_chat_id,
         render_upload_success(report_date, file_name),
     )
+    print(f"Upload success notification sent: report_date={report_date}")
 
 
 def _send_upload_failure(settings, report_date: str, exc: Exception) -> None:
